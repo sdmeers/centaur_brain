@@ -34,7 +34,7 @@
         - Saves Markdown text to `Vault/Sources/{Title}_raw.md`.
         - Downloads PDFs to `Vault/Sources/{Title}.pdf`.
     3. **AI Analyst:** Sends the raw text to `gemini-2.0-flash` (or latest) with a specialized "Ontology Architect" prompt.
-    4. **Node Creator:** Writes the AI output as a new Markdown file in `Vault/Inbox/{Title}.md`, including a YAML frontmatter and a `[[link]]` back to the raw source.
+    4. **Node Creator:** Writes the AI output as a new Markdown file in `Vault/Summaries/{Title}.md`, including a YAML frontmatter and a `[[link]]` back to the raw source.
 - **CLI Tools:**
     - `add_book.py`: A local script to trigger "Book Mode" (AI-generated book summaries saved directly to the vault).
 
@@ -44,7 +44,7 @@
 - **Filename:** `{Sanitized_Title}_raw.md` or `{Sanitized_Title}.pdf`.
 - **Content:** The verbatim extracted material.
 
-### Path B: The Brain Node (`Vault/Inbox/`)
+### Path B: The Brain Node (`Vault/Summaries/`)
 - **Filename:** `{Sanitized_Title}.md`.
 - **Structure:**
 ```yaml
@@ -84,7 +84,7 @@ tags: [brain, {dynamic_tags}]
 
 ### Phase 2: Local Backend Development (`backend/main.py`)
 - [ ] **FastAPI Setup:** Create the `/process` endpoint.
-- [ ] **File Operations:** Implement robust file writing logic for `Sources/` and `Inbox/` folders.
+- [ ] **File Operations:** Implement robust file writing logic for `Sources/` and `Summaries/` folders.
 - [ ] **PDF Handler:** Use `httpx` to download and save PDFs; pass the URL to Gemini for analysis (using Gemini's native PDF support if possible, or text extraction).
 - [ ] **AI Integration:** Port the prompt logic from legacy but update it to prioritize `[[wikilink]]` generation.
 
@@ -95,7 +95,7 @@ tags: [brain, {dynamic_tags}]
 
 ### Phase 4: CLI Tooling Update (`backend/add_book.py`)
 - [ ] **CLI Refactor:** Remove all Notion calls.
-- [ ] **Direct-to-Vault:** Logic to generate a book summary via Gemini and save it straight to the Obsidian `Inbox`.
+- [ ] **Direct-to-Vault:** Logic to generate a book summary via Gemini and save it straight to the Obsidian `Summaries`.
 
 ## 6. Security & Safety
 - **Local Only:** The API will bind to `127.0.0.1` only.
