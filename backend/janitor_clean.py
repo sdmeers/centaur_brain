@@ -56,8 +56,14 @@ def clean_file(file_path):
 
     data["tags"] = new_tags
     
-    # 2. Update Body with Canonical Synonyms
-    new_body = body
+    # 2. Update Body with Canonical Synonyms and Remove Redundant H1
+    new_body = body.strip()
+    
+    # Remove H1 if it matches the title or starts with a wikilink
+    # Pattern: # [[Title]] or # Title
+    new_body = re.sub(r'^#\s*\[\[.*?\]\]\s*', '', new_body, flags=re.MULTILINE)
+    new_body = re.sub(r'^#\s*.*?\n', '', new_body, count=1)
+    
     for pattern, replacement in MAP.items():
         new_body = re.sub(pattern, replacement, new_body, flags=re.IGNORECASE)
     
@@ -76,12 +82,40 @@ def clean_file(file_path):
         f.write(new_content)
     print(f"  [CLEANED] {file_path.name}")
 
+def manifest_topics():
+    print("📍 Manifesting Topic Hubs...")
+    all_links = {}
+    files = list(Path(SUMMARIES_DIR).glob("*.md"))
+    
+    # 1. Count all wikilinks in summaries
+    for f in files:
+        with open(f, 'r', encoding='utf-8') as file:
+            content = file.read()
+            # Find all [[Topic]] links
+            links = re.findall(r'\[\[(.*?)\]\]', content)
+            for link in links:
+                # Handle piped links like [[Topic|Display]]
+                topic = link.split('|')[0].strip()
+                if topic and not topic.endswith(('.pdf', '.md', '_raw')):
+                    all_links[topic] = all_links.get(topic, 0) + 1
+    
+    # 2. Create files for topics with 2+ mentions
+    for topic, count in all_links.items():
+        if count >= 2:
+            topic_path = os.path.join(VAULT_PATH, f"{topic}.md")
+            if not os.path.exists(topic_path):
+                with open(topic_path, 'w', encoding='utf-8') as f:
+                    f.write(f"# {topic}\n\nAutomated Topic Hub for Centaur Brain.\n\n## Mentions\nThis topic is connected to {count} different summaries.")
+                print(f"  [MANIFESTED] {topic} ({count} connections)")
+
 def run_janitor():
     print(f"🧹 Janitor starting in {SUMMARIES_DIR}...")
     files = list(Path(SUMMARIES_DIR).glob("*.md"))
     for f in files:
         clean_file(f)
-    print("✨ Vault clean-up complete.")
+    
+    manifest_topics()
+    print("✨ Vault clean-up and manifestation complete.")
 
 if __name__ == "__main__":
     run_janitor()
