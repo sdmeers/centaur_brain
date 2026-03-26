@@ -28,13 +28,12 @@ def clean_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    if not content.startswith("---"): return
+    # Find the first '---' and the second '---'
+    match = re.search(r'---(.*?)---', content, re.DOTALL)
+    if not match: return
     
-    parts = content.split("---", 2)
-    if len(parts) < 3: return
-    
-    yaml_block = parts[1]
-    body = parts[2]
+    yaml_block = match.group(1)
+    body = content.split("---", 2)[2]
     
     try:
         data = yaml.safe_load(yaml_block)
@@ -76,11 +75,12 @@ def clean_file(file_path):
 
     # 4. Final YAML Assembly
     new_yaml = yaml.dump(data, sort_keys=False, allow_unicode=True).strip()
-    new_content = f"---\n{new_yaml}\n---{new_body}"
+    # FORCE YAML TO THE ABSOLUTE START
+    new_content = f"---\n{new_yaml}\n---\n\n{new_body.strip()}"
     
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(new_content)
-    print(f"  [CLEANED] {file_path.name}")
+    print(f"  [FIXED] {file_path.name}")
 
 def manifest_topics():
     print("📍 Manifesting Topic Hubs...")
