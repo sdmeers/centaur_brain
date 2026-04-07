@@ -15,7 +15,8 @@ from main import (
 from add_book import add_book
 from logger import log_action
 
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=dotenv_path)
 
 OBSIDIAN_VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH")
 if not OBSIDIAN_VAULT_PATH:
