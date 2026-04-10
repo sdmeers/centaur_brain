@@ -1,6 +1,7 @@
 import os
 import re
 import yaml
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 from logger import log_action
@@ -99,7 +100,7 @@ def run_janitor():
         clean_file(f)
         
     # 2. Orphan Link Detection
-    print("📍 Detecting Orphan Links...")
+    print("📍 Detecting Missing Link Snippets...")
     all_markdown_files = list(Path(SUMMARIES_DIR).glob("*.md")) + list(Path(CONCEPTS_DIR).glob("*.md"))
     
     links_data = {} # link -> {'count': int, 'snippets': list[str]}
@@ -121,14 +122,21 @@ def run_janitor():
                     snippets = extract_snippets(content, topic)
                     links_data[topic]['snippets'].extend(snippets)
 
-    # Check which links are missing a file in CONCEPTS_DIR or ATLAS_DIR
+    # Check which links are missing a file in CONCEPTS_DIR, ATLAS_DIR, or SUMMARIES_DIR
     missing_concepts = {}
+    source_emojis = ("🎞️", "🏛️", "📄", "📖")
+    
     for topic, data in links_data.items():
+        # Skip if the link starts with a source emoji
+        if topic.startswith(source_emojis):
+            continue
+            
         safe_topic = re.sub(r'[\\/*?:"<>|]', "", topic).strip()
         concept_path = os.path.join(CONCEPTS_DIR, f"{safe_topic}.md")
         atlas_path = os.path.join(ATLAS_DIR, f"{safe_topic}.md")
+        summary_path = os.path.join(SUMMARIES_DIR, f"{safe_topic}.md")
         
-        if not os.path.exists(concept_path) and not os.path.exists(atlas_path):
+        if not any(os.path.exists(p) for p in [concept_path, atlas_path, summary_path]):
             missing_concepts[topic] = data
             
     # 3. Auto-Healing
@@ -189,8 +197,35 @@ Here is the concept page content:
             except Exception as e:
                 print(f"  [ERROR] Failed to refactor {f.name}: {e}")
                 
+    # 5. Orphan Detection
+    print("🕸️ Scanning for Orphaned Concepts...")
+    all_summaries_and_atlas = list(Path(SUMMARIES_DIR).glob("*.md")) + list(Path(ATLAS_DIR).glob("*.md"))
+    active_links = set()
+
+    for f in all_summaries_and_atlas:
+        with open(f, 'r', encoding='utf-8') as file:
+            content = file.read()
+            links = re.findall(r'\[\[(.*?)\]\]', content)
+            for raw_link in links:
+                topic = raw_link.split('|')[0].strip()
+                active_links.add(topic)
+
+    concept_files = list(Path(CONCEPTS_DIR).glob("*.md"))
+    orphans = []
+    for f in concept_files:
+        concept_name = f.stem
+        if concept_name not in active_links:
+            orphans.append(concept_name)
+
+    if orphans:
+        print(f"📍 Found {len(orphans)} orphaned concepts (manually review in 04 Concepts/):")
+        for o in sorted(orphans):
+            print(f"  - [[{o}]]")
+    else:
+        print("✅ No orphaned concepts found.")
+
     print("✨ Vault clean-up, auto-healing, and refactoring complete.")
-    log_action("Lint", f"Janitor pass: {manifested_count} concepts healed, {refactored_count} concepts refactored.")
+    log_action("Lint", f"Janitor pass: {manifested_count} concepts healed, {refactored_count} refactored, {len(orphans)} orphans detected.")
 
 if __name__ == "__main__":
     run_janitor()
