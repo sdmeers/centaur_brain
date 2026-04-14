@@ -25,6 +25,26 @@ CONCEPTS_DIR = os.path.join(VAULT_PATH, "04 Concepts")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
+def call_gemini_with_retry(model, contents, config=None, max_retries=5):
+    """Synchronous wrapper to call Gemini API with exponential backoff for 429 and 503 errors."""
+    for attempt in range(max_retries):
+        try:
+            return client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config
+            )
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "503" in error_str:
+                wait_time = (2 ** attempt) + 2  # 3s, 4s, 6s, 10s, 18s
+                print(f"  [RETRYING] Encountered {error_str[:3]} error. Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
+                time.sleep(wait_time)
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"Failed after {max_retries} attempts: {error_str}")
+            else:
+                raise e
+
 MAX_API_CALLS_PER_RUN = 250
 STATE_FILE = os.path.join(os.path.dirname(__file__), ".janitor_state.json")
 
@@ -109,9 +129,10 @@ def clean_file(file_path):
     new_yaml = yaml.dump(data, sort_keys=False, allow_unicode=True).strip()
     new_content = f"---\n{new_yaml}\n---\n\n{new_body.strip()}"
     
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(new_content)
-    print(f"  [FIXED] {file_path.name}")
+    if new_content.strip() != content.strip():
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        print(f"  [FIXED] {file_path.name}")
 
 def extract_snippets(content: str, link: str, snippet_length: int = 150) -> list[str]:
     snippets = []
@@ -167,7 +188,7 @@ Here are the concept pages to merge:
 {combined_content}
 """
             try:
-                response = client.models.generate_content(
+                response = call_gemini_with_retry(
                     model="gemini-3.1-flash-lite-preview",
                     contents=prompt
                 )
@@ -308,7 +329,7 @@ Generate a concept page for '{topic}' based on its usage in the following contex
 Please return the content formatted as Markdown. Include a definition, and synthesize how it's being used based on the snippets."""
             
             try:
-                response = client.models.generate_content(
+                response = call_gemini_with_retry(
                     model="gemini-3.1-flash-lite-preview",
                     contents=prompt
                 )
@@ -353,7 +374,7 @@ Here is the concept page content:
 {content}
 """
             try:
-                response = client.models.generate_content(
+                response = call_gemini_with_retry(
                     model="gemini-3.1-flash-lite-preview",
                     contents=prompt
                 )
