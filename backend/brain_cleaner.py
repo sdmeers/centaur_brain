@@ -46,7 +46,7 @@ def call_gemini_with_retry(model, contents, config=None, max_retries=5):
                 raise e
 
 MAX_API_CALLS_PER_RUN = 250
-STATE_FILE = os.path.join(os.path.dirname(__file__), ".janitor_state.json")
+STATE_FILE = os.path.join(os.path.dirname(__file__), ".brain_cleaner_state.json")
 
 # Canonical Mapping
 MAP = {
@@ -141,8 +141,8 @@ def extract_snippets(content: str, link: str, snippet_length: int = 150) -> list
         snippets.append(match.group(0).strip().replace('\n', ' '))
     return snippets
 
-def run_janitor():
-    print(f"🧹 Janitor starting...")
+def run_brain_cleaner():
+    print(f"🧹 Brain cleaner starting...")
     api_calls = 0
     state = load_state()
     
@@ -422,7 +422,7 @@ Here is the concept page content:
         print("✅ No orphaned concepts found.")
 
     print("✨ Vault clean-up, auto-healing, and refactoring complete.")
-    log_action("Lint", f"Janitor pass: {dedup_count} deduped, {manifested_count} concepts healed, {refactored_count} refactored, {len(orphans)} orphans detected.")
+    log_action("Lint", f"Brain cleaner pass: {dedup_count} deduped, {manifested_count} concepts healed, {refactored_count} refactored, {len(orphans)} orphans detected.")
 
 if __name__ == "__main__":
-    run_janitor()
+    run_brain_cleaner()
