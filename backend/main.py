@@ -154,7 +154,7 @@ async def get_or_create_context_cache(model: str, system_instruction: str) -> Op
             try:
                 await client.aio.caches.delete(name=cached_name)
             except Exception as e:
-                print(f"Backend [Cache]: Error deleting old cache: {e}")
+                print(f"Backend [Cache]: Old cache already expired/deleted, skipping cleanup.")
     
     print("Backend [Cache]: Creating new context cache for system instruction...")
     try:
@@ -628,7 +628,11 @@ from bs4 import BeautifulSoup
 
 def extract_web_text(url: str) -> str:
     """Fetches a URL and extracts readable text using BeautifulSoup."""
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
     response = httpx.get(url, follow_redirects=True, timeout=30.0, headers=headers)
     response.raise_for_status()
     
